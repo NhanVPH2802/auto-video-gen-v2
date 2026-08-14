@@ -1,0 +1,65 @@
+.env
+.env.*
+!.env.example
+node_modules/
+**/node_modules/
+backups/
+**/backups/
+.cache/
+**/.cache/
+*.log
+/data/
+/downloads/
+/output/
+/base/output/
+runtime/data/*
+runtime/downloads/*
+runtime/output/*
+runtime/branding/*
+!runtime/data/.gitkeep
+!runtime/downloads/.gitkeep
+!runtime/output/.gitkeep
+!runtime/branding/.gitkeep
+
+# Local development
+.claude/
+.config/
+.npm/
+.pki/
+
+# Runtime secrets and generated data
+runtime/data/*
+runtime/downloads/*
+runtime/output/*
+runtime/branding/*
+!runtime/data/.gitkeep
+!runtime/downloads/.gitkeep
+!runtime/output/.gitkeep
+!runtime/branding/.gitkeep
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.key
+
+# Generated
+*.log
+*.wav
+*.mp3
+*.mp4
+*.zip
+*.tar
+*.tar.gz
+
+# Dependencies/cache
+node_modules/
+**/node_modules/
+.cache/
+**/.cache/
+
+# Editor / manual backup files
+*.bak
+*.old
+*.orig
+*~

@@ -1,0 +1,18 @@
+services:
+  auto-video-gen:
+    image: ${IMAGE:?IMAGE must be set}
+    container_name: auto-video-gen
+    restart: unless-stopped
+    init: true
+    shm_size: "1gb"
+    ports:
+      - "3080:3080"
+    environment:
+      PORT: "3080"
+      NODE_ENV: "production"
+      HYPERFRAMES_NO_TELEMETRY: "1"
+    volumes:
+      - ./runtime/data:/opt/auto-video-gen/data
+      - ./runtime/downloads:/opt/auto-video-gen/downloads
+      - ./runtime/output:/opt/auto-video-gen/base/output
+      - ./runtime/branding:/opt/auto-video-gen/branding

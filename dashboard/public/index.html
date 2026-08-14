@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Auto Video Gen 2.0 Preview</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">AUTO VIDEO GEN · 2.0 PREVIEW</p>
+      <h1>Auto Video Gen</h1>
+      <p class="subtitle">Tạo kịch bản → duyệt từng frame → chốt nội dung → tạo giọng → render video.</p>
+    </div>
+    <div class="topbar-actions">
+      <div id="healthBadge" class="health checking">Đang kiểm tra kết nối…</div>
+      <button id="openConnections" class="set-api-button" type="button">Set API</button>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel create-panel">
+      <div class="section-title">
+        <span>01</span>
+        <div><h2>Tạo dự án mới</h2><p>AI chỉ tạo kịch bản ở bước đầu. Chưa tạo giọng và chưa render.</p></div>
+      </div>
+
+      <div class="workflow-guide" aria-label="Quy trình">
+        <div class="workflow-guide-step active"><span>1</span><div><strong>Tạo kịch bản</strong><small>AI đọc nguồn và sinh từng frame</small></div></div>
+        <div class="workflow-guide-arrow">→</div>
+        <div class="workflow-guide-step"><span>2</span><div><strong>Duyệt &amp; chốt</strong><small>Sửa chữ hiển thị và lời đọc</small></div></div>
+        <div class="workflow-guide-arrow">→</div>
+        <div class="workflow-guide-step"><span>3</span><div><strong>Render</strong><small>Tạo giọng rồi dựng video</small></div></div>
+      </div>
+
+      <form id="jobForm" enctype="multipart/form-data">
+        <div class="mode-tabs" role="tablist">
+          <button type="button" class="mode-tab active" data-mode="url">Dán URL</button>
+          <button type="button" class="mode-tab" data-mode="text">Dán nội dung</button>
+          <button type="button" class="mode-tab" data-mode="file">Tải file</button>
+        </div>
+        <input type="hidden" name="sourceMode" id="sourceMode" value="url">
+
+        <div class="source-pane active" data-pane="url">
+          <label>URL bài viết hoặc GitHub repository</label>
+          <input name="url" type="url" placeholder="https://...">
+        </div>
+        <div class="source-pane" data-pane="text">
+          <label>Nội dung nguồn</label>
+          <textarea name="text" rows="9" placeholder="Dán nội dung cần chuyển thành video..."></textarea>
+        </div>
+        <div class="source-pane" data-pane="file">
+          <label>TXT, MD, PDF, DOCX, DOC, ODT, RTF, HTML</label>
+          <div class="file-box"><input name="file" type="file" accept=".txt,.md,.pdf,.docx,.doc,.odt,.rtf,.html,.htm,.csv,.json"><p>PDF scan chưa hỗ trợ OCR.</p><p id="fileReuseNote" class="field-note" hidden></p></div>
+        </div>
+
+        <details class="form-accordion" open>
+          <summary><span>Nguồn tạo kịch bản</span><small>AI + Model</small></summary>
+          <div class="accordion-body">
+            <div class="grid two">
+              <div><label>Nguồn AI</label><select id="aiProvider" name="aiProvider"></select></div>
+              <div><label>Model</label><select id="aiModel" name="aiModel"></select></div>
+            </div>
+            <div id="githubCatalogTools" class="github-catalog-tools" hidden>
+              <div><label>Tìm model</label><input id="githubModelSearch" type="search" placeholder="gpt, phi, llama, mistral..."></div>
+              <div><label>Lọc</label><select id="githubModelFilter">
+                <option value="recommended">Khuyến nghị</option><option value="all">Tất cả model text</option>
+                <option value="low">Tier low</option><option value="high">Tier high</option><option value="custom">Tier custom</option>
+                <option value="general">General / instruct</option><option value="reasoning">Reasoning</option><option value="code">Code</option><option value="vision">Vision</option>
+              </select></div>
+              <div class="catalog-refresh-wrap"><label>&nbsp;</label><button id="refreshModels" class="secondary-button" type="button">Tải lại model</button></div>
+            </div>
+            <div id="primaryModelInfo" class="model-info-card" hidden></div>
+            <p id="catalogNote" class="field-note"></p><p id="providerNote" class="field-note"></p>
+          </div>
+        </details>
+
+        <details class="form-accordion" open>
+          <summary><span>Nguồn giọng đọc</span><small>Chọn server và giọng</small></summary>
+          <div class="accordion-body">
+            <div class="grid two equal">
+              <div><label>Voice Server</label><select id="ttsProvider" name="ttsProvider"></select></div>
+              <div class="voice-refresh-wrap"><label>&nbsp;</label><button id="refreshVoices" class="secondary-button" type="button">Tải lại danh sách giọng</button></div>
+            </div>
+            <div class="grid two equal">
+              <div><label>Giới tính</label><select id="voiceGender" name="voiceGender"></select></div>
+              <div><label>Giọng đọc</label><select id="voiceKey" name="voiceKey"></select></div>
+            </div>
+            <p id="voiceNote" class="field-note"></p>
+          </div>
+        </details>
+
+        <details class="form-accordion">
+          <summary><span>Phong cách nội dung</span><small>Quyết định cách AI viết kịch bản</small></summary>
+          <div class="accordion-body">
+            <div class="grid two"><div><label>Loại video</label><select id="contentStyle" name="contentStyle"></select></div><div><label>Đối tượng người xem</label><select id="audience" name="audience"></select></div></div>
+            <label>Mức độ chi tiết</label><div id="detailLevelOptions" class="choice-options three"></div>
+            <div id="styleOptions" class="style-options">
+              <label data-styles="tutorial listicle"><input name="numberedSteps" type="checkbox" value="1"> Đánh số từng bước / từng mục</label>
+              <label data-styles="tutorial"><input name="includeWarnings" type="checkbox" value="1"> Thêm lưu ý hoặc cảnh báo</label>
+              <label data-styles="tutorial"><input name="includeVerification" type="checkbox" value="1"> Thêm cách kiểm tra kết quả</label>
+              <label data-styles="tutorial"><input name="showTerminalCommands" type="checkbox" value="1"> Hiển thị lệnh terminal quan trọng</label>
+              <label data-styles="feature-intro"><input name="emphasizeBenefits" type="checkbox" value="1"> Nhấn mạnh lợi ích thực tế</label>
+              <label data-styles="feature-intro"><input name="includeCta" type="checkbox" value="1"> Thêm lời kêu gọi hành động</label>
+              <label data-styles="feature-intro compare"><input name="compareAlternatives" type="checkbox" value="1"> So sánh với giải pháp khác</label>
+            </div>
+          </div>
+        </details>
+
+        <details class="form-accordion" open>
+          <summary><span>Sườn kịch bản</span><small>Tiêu đề, thời lượng, thuật ngữ, cách đọc</small></summary>
+          <div class="accordion-body">
+            <label>Tiêu đề gợi ý <small>(không bắt buộc)</small></label><input name="title" type="text" maxlength="160" placeholder="AI tự lấy nếu bỏ trống">
+            <label>Thời lượng mục tiêu</label>
+            <div class="duration-options">
+              <label><input type="radio" name="duration" value="60" checked><span>60s<small>Shorts/Reels</small></span></label>
+              <label><input type="radio" name="duration" value="90"><span>90s<small>Giải thích mở rộng</small></span></label>
+              <label><input type="radio" name="duration" value="120"><span>120s<small>Nội dung vừa</small></span></label>
+              <label><input type="radio" name="duration" value="180"><span>180s<small>YouTube/Facebook</small></span></label>
+              <label><input type="radio" name="duration" value="custom"><span>Tùy chỉnh<small>30–240 giây</small></span></label>
+            </div>
+            <input id="customDuration" name="customDuration" type="number" min="30" max="240" value="120" hidden>
+            <label>Từ chuyên ngành cần giữ nguyên <small>(phân cách bằng dấu phẩy)</small></label><input name="keepTerms" type="text" placeholder="Proxmox, FortiGate, OSI, TCP/IP, API...">
+            <label>Cách đọc riêng cho TTS <small>(mỗi dòng: TỪ=CÁCH ĐỌC)</small></label><textarea class="pronunciation-rules" name="pronunciationRules" rows="3" placeholder="OSI=ô ét ai&#10;TCP/IP=ti xi pi trên ai pi"></textarea>
+            <p class="field-note">Chữ hiển thị vẫn giữ nguyên thuật ngữ; chỉ nội dung gửi TTS được thay cách đọc.</p>
+          </div>
+        </details>
+
+        <details class="form-accordion">
+          <summary><span>Thiết lập video</span><small>Theme, tốc độ render, thương hiệu</small></summary>
+          <div class="accordion-body">
+            <div class="grid two"><div><label>Theme hình ảnh</label><select name="theme"><option value="dark-neon">Dark Neon</option><option value="light-pro">Light Pro</option></select></div><div><label>Tốc độ render</label><select name="renderProfile"><option value="fast">Nhanh — 20 fps, 2 worker</option><option value="balanced" selected>Cân bằng — 24 fps</option><option value="quality">Chất lượng — 30 fps</option></select></div></div>
+            <label class="toggle-row"><input type="checkbox" name="durationCalibration" value="1"> Cân chỉnh giọng theo đúng thời lượng <small>(có thể lâu hơn)</small></label>
+            <div class="grid two equal branding-grid">
+              <div><label>Logo góc trên</label><div class="file-box compact"><input name="brandLogo" type="file" accept=".png,.jpg,.jpeg,.webp"><p>Không chọn: dùng mặc định.</p></div></div>
+              <div><label>Avatar thẻ theo dõi</label><div class="file-box compact"><input name="profileAvatar" type="file" accept=".png,.jpg,.jpeg,.webp"><p>Không chọn: dùng mặc định.</p></div></div>
+            </div>
+          </div>
+        </details>
+
+        <div class="project-submit-row"><button id="submitButton" class="primary" type="submit">1. Tạo kịch bản</button><button id="cancelJobEdit" class="secondary-button" type="button" hidden>Hủy sửa</button></div>
+        <p id="formMessage" class="form-message"></p>
+      </form>
+    </section>
+
+    <section class="panel jobs-panel">
+      <div class="section-title"><span>02</span><div><h2>Kịch bản &amp; Render</h2><p>AI tạo nháp → duyệt từng frame → chốt → Render.</p></div></div>
+      <div id="jobs" class="jobs"></div>
+    </section>
+  </main>
+
+  <dialog id="connectionsDialog" class="connections-dialog wide-dialog">
+    <div class="dialog-head"><div><p class="eyebrow">CONNECTION MANAGER</p><h3>Set API</h3></div><button id="closeConnections" class="icon-button">×</button></div>
+    <p class="field-note">API key được mã hóa ở backend. Trình duyệt chỉ nhận trạng thái kết nối, không nhận secret đã lưu.</p>
+    <div class="connection-tabs"><button type="button" class="connection-tab active" data-connection-category="ai">AI</button><button type="button" class="connection-tab" data-connection-category="voice">Voice</button></div>
+    <div class="connection-layout">
+      <div><div id="connectionList" class="connection-list"></div><button id="newConnection" type="button" class="secondary-button full">+ Thêm kết nối</button></div>
+      <form id="connectionForm" class="connection-form">
+        <input type="hidden" id="connectionId">
+        <input type="hidden" id="connectionCategory" value="ai">
+        <div class="grid two"><div><label>Tên kết nối</label><input id="connectionName" class="connection-input" type="text" autocomplete="off" required></div><div><label>Loại / Adapter</label><select id="connectionAdapter"></select></div></div>
+        <div class="connection-url-block"><label>URL <small>(server local hoặc cloud)</small></label><input id="connectionUrl" class="connection-input" type="text" autocomplete="off" placeholder="http://192.168.1.154:8000 hoặc https://..."></div>
+        <label>API Key</label><input id="connectionApiKey" class="connection-input" type="password" autocomplete="new-password" placeholder="Để trống khi sửa để giữ key hiện tại">
+        <div id="connectionHeaderWrap"><label>API Header <small>(nếu server yêu cầu)</small></label><input id="connectionApiHeader" class="connection-input" placeholder="Authorization hoặc x-api-key"></div>
+        <div id="connectionModelsWrap"><label>Models <small>(tự tải khi server hỗ trợ; có thể nhập thủ công)</small></label><textarea id="connectionModels" rows="3" placeholder="microsoft/phi-4, openai/gpt-4.1-mini"></textarea></div>
+        <details id="connectionAiAdvancedWrap" class="connection-advanced" hidden>
+          <summary>Thiết lập AI API nâng cao</summary>
+          <p class="field-note">Dùng cho Custom AI REST hoặc server AI có API riêng. Local AI/OpenAI-compatible không cần cấu hình phần này nếu dùng chuẩn /models và /chat/completions.</p>
+          <div class="grid two">
+            <div><label>Auth prefix</label><input id="connectionAiAuthPrefix" class="connection-input" placeholder="Bearer "></div>
+            <div><label>Models endpoint</label><input id="connectionAiModelsEndpoint" class="connection-input" placeholder="/models"></div>
+            <div><label>Chat/Generate endpoint</label><input id="connectionAiChatEndpoint" class="connection-input" placeholder="/generate hoặc /chat"></div>
+            <div><label>Models list path</label><input id="connectionAiModelsListPath" class="connection-input" placeholder="data hoặc models"></div>
+            <div><label>Model ID field</label><input id="connectionAiModelIdField" class="connection-input" placeholder="id"></div>
+            <div><label>Model name field</label><input id="connectionAiModelNameField" class="connection-input" placeholder="name"></div>
+            <div><label>Request mode</label><select id="connectionAiRequestMode"><option value="messages">Messages</option><option value="prompt">Prompt text</option></select></div>
+            <div><label>Model field</label><input id="connectionAiModelField" class="connection-input" placeholder="model"></div>
+            <div><label>Messages field</label><input id="connectionAiMessagesField" class="connection-input" placeholder="messages"></div>
+            <div><label>Prompt field</label><input id="connectionAiPromptField" class="connection-input" placeholder="prompt"></div>
+            <div><label>Response text path</label><input id="connectionAiResponsePath" class="connection-input" placeholder="choices.0.message.content"></div>
+          </div>
+          <label>Extra Request JSON <small>(gộp thêm vào body; không nhập secret tại đây)</small></label><textarea id="connectionAiExtraJson" rows="3" placeholder='{"temperature":0.2}'></textarea>
+        </details>
+        <div id="connectionVoicesWrap" hidden><label>Danh sách giọng thủ công <small>mỗi dòng: ID|Giới tính|Tên|VOICE_ID</small></label><textarea id="connectionVoices" rows="4" placeholder="nam-1|Nam|Anh Khoa|VOICE_ID"></textarea></div>
+        <details id="connectionVoiceAdvancedWrap" class="connection-advanced" hidden>
+          <summary>Thiết lập Voice API nâng cao</summary>
+          <p class="field-note">Dùng cho OpenAI-compatible TTS, OmniVoice hoặc Voice server REST khác. Nếu server có API riêng, khai báo endpoint và mapping tại đây.</p>
+          <div class="grid two">
+            <div><label>Auth prefix</label><input id="connectionAuthPrefix" class="connection-input" placeholder="Bearer "></div>
+            <div><label>Voices endpoint</label><input id="connectionVoicesEndpoint" class="connection-input" placeholder="/voices"></div>
+            <div><label>TTS endpoint</label><input id="connectionTtsEndpoint" class="connection-input" placeholder="/tts hoặc /audio/speech"></div>
+            <div><label>Voice list path</label><input id="connectionVoiceListPath" class="connection-input" placeholder="voices"></div>
+            <div><label>Voice ID field</label><input id="connectionVoiceIdField" class="connection-input" placeholder="id"></div>
+            <div><label>Voice name field</label><input id="connectionVoiceNameField" class="connection-input" placeholder="name"></div>
+            <div><label>Voice gender field</label><input id="connectionVoiceGenderField" class="connection-input" placeholder="gender"></div>
+            <div><label>Voice description field</label><input id="connectionVoiceDescriptionField" class="connection-input" placeholder="description"></div>
+            <div><label>Text field</label><input id="connectionTextField" class="connection-input" placeholder="text"></div>
+            <div><label>Voice field</label><input id="connectionVoiceField" class="connection-input" placeholder="voice"></div>
+            <div><label>Filename field</label><input id="connectionFilenameField" class="connection-input" placeholder="filename"></div>
+            <div><label>TTS model <small>(OpenAI-compatible)</small></label><input id="connectionTtsModel" class="connection-input" placeholder="tts-1"></div>
+            <div><label>Audio format</label><input id="connectionAudioFormat" class="connection-input" placeholder="wav"></div>
+            <div><label>Response mode</label><select id="connectionResponseMode"><option value="binary">Audio binary</option><option value="json-url">JSON chứa URL audio</option><option value="json-base64">JSON chứa base64</option></select></div>
+            <div><label>Response path</label><input id="connectionResponsePath" class="connection-input" placeholder="data.audio_url hoặc audio_base64"></div>
+          </div>
+          <label>Extra JSON <small>(gộp thêm vào request TTS)</small></label><textarea id="connectionExtraJson" rows="3" placeholder='{"speed":1.0}'></textarea>
+        </details>
+        <label class="toggle-row"><input id="connectionEnabled" type="checkbox" checked> Bật kết nối này</label>
+        <div class="connection-form-actions"><button id="saveConnection" type="submit" class="primary">Lưu</button><button id="testConnection" type="button" class="secondary-button">Test kết nối</button><button id="deleteConnection" type="button" class="danger-button" hidden>Xóa</button></div>
+        <p id="connectionMessage" class="field-note"></p>
+      </form>
+    </div>
+  </dialog>
+
+  <dialog id="detailDialog"><div class="dialog-head"><div><p class="eyebrow">CHI TIẾT TÁC VỤ</p><h3 id="detailTitle">Tác vụ</h3></div><button id="closeDialog" class="icon-button">×</button></div><div id="detailContent"></div></dialog>
+
+  <dialog id="sceneEditorDialog" class="wide-dialog storyboard-dialog">
+    <div class="dialog-head"><div><p class="eyebrow">DUYỆT KỊCH BẢN THEO FRAME</p><h3 id="sceneEditorTitle">Nội dung từng frame</h3></div><button id="closeSceneEditor" class="icon-button">×</button></div>
+    <p class="field-note">Mỗi frame tách riêng <strong>Nội dung hiển thị</strong> và <strong>Nội dung đọc</strong>. Lưu nháp không render. Chỉ khi <strong>Chốt kịch bản</strong> thì nút Render mới được mở.</p>
+    <div id="sceneEditorList" class="scene-editor-list"></div>
+    <div class="editor-actions"><span id="sceneEditorSummary" class="field-note"></span><div class="editor-buttons"><button id="saveSceneEditor" class="secondary-button" type="button">Lưu nháp</button><button id="approveSceneEditor" class="primary" type="button">✓ Chốt kịch bản</button></div></div>
+  </dialog>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>

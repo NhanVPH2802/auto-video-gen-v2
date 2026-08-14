@@ -1,0 +1,21 @@
+{
+  "name": "auto-video-gen-dashboard",
+  "version": "2.0.0-rc.1",
+  "private": true,
+  "type": "module",
+  "description": "Auto Video Gen 2.0 Preview 2.4: extensible AI and Voice adapters with OpenAI-compatible and Custom REST bridges",
+  "scripts": {
+    "start": "node server.js",
+    "check": "node --check server.js && node --check lib/config.js && node --check lib/store.js && node --check lib/input-reader.js && node --check lib/ai-provider.js && node --check lib/script-builder.js && node --check lib/worker.js && node --check public/app.js && node --check lib/vieneu-provider.js && node --check lib/connection-store.js && node --check lib/connection-manager.js && node --check lib/voice-bridge.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "cheerio": "^1.1.2",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mammoth": "^1.11.0",
+    "multer": "^2.0.2"
+  }
+}
