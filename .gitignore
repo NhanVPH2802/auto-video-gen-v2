@@ -1,0 +1,42 @@
+# Secrets
+.env
+.env.local
+*.env.local
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+data/
+output/
+downloads/
+
+# User branding/runtime assets
+branding/
+
+# Generated media
+*.mp3
+*.wav
+*.mp4
+*.mov
+*.webm
+
+# Temporary files
+tmp/
+temp/
+.cache/
+*.log
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Backup
+*.bak
+*.backup
+backup*/
