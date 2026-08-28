@@ -1,78 +1,315 @@
-# Auto Video Gen 2.0 Preview 2.7.0
+# Auto Video Gen 2.7.0
 
-Bản 2.7.0 kế thừa toàn bộ fix 2.6.3 và bổ sung các yêu cầu mới cho workflow tạo video.
+Auto Video Gen là hệ thống tạo video dọc 9:16 tự động từ URL, nội dung nhập trực tiếp hoặc file.
 
-## Tính năng mới 2.7.0
+Pipeline chính:
 
-### 1. Intro / giới thiệu nội dung
+**Tạo dự án → AI tạo kịch bản → duyệt từng frame → tạo Voice → Render Video → Outro**
 
-- Form tạo dự án có trường **Intro / Giới thiệu nội dung**.
-- Nếu để trống, AI tự tạo một frame Intro ngắn ngay sau Hook.
-- Nếu nhập nội dung, frame thứ 2 sẽ dùng nội dung này làm lời đọc và phần hiển thị Intro.
-- Intro dùng template `callout` để tương thích renderer hiện tại, tag hiển thị là `GIỚI THIỆU`.
+## Phiên bản
 
-### 2. Tên dự án
+**Production: 2.7.0**
 
-- Có trường **Tên dự án** riêng, chỉ dùng để quản lý dashboard.
-- Tên dự án không làm thay đổi tiêu đề nội dung mà AI tạo.
-- Danh sách dự án, cửa sổ chi tiết và chế độ sửa đều ưu tiên hiển thị tên dự án này.
-- Nếu bỏ trống, dashboard vẫn fallback về tiêu đề nguồn như trước.
+Môi trường đã kiểm thử:
 
-### 3. Outro tự giữ nội dung cũ
+- Ubuntu Server 24.04 LTS
+- Node.js 22
+- npm 10
+- FFmpeg 6.x
+- systemd
+- Port Dashboard: `3080`
 
-- Khi tạo dự án mới, hệ thống tự tìm Outro của dự án gần nhất và nạp lại toàn bộ nội dung Outro.
-- Khi sửa lại chính dự án, hệ thống ưu tiên giữ Outro của phiên bản trước của dự án đó.
-- Nếu người dùng sửa Outro trong bước **Duyệt kịch bản**, phiên bản đã sửa sẽ trở thành Outro được dự án kế tiếp tự nạp lại.
-- Tên kênh vẫn lấy Branding hiện tại để tránh giữ nhầm tên kênh cũ.
-- Social footer Facebook / YouTube / TikTok vẫn được sinh tự động khi render như bản trước.
+---
 
-### 4. Follow card rộng hơn
+# 1. Cài mới trên Ubuntu Server
 
-- Follow card tăng từ khoảng 760px lên tối đa 840px.
-- Safe-area hai bên giảm còn 60px.
-- Nút Follow / Following tăng lên 230px và thêm padding, căn giữa chữ.
-- Vẫn dùng `left:0; right:0; margin:auto`, không dùng translateX/xPercent để tránh GSAP đẩy card lệch khung.
+## Bước 1 - Đăng nhập server
 
-## Các fix 2.6.3 vẫn giữ
+SSH vào Ubuntu Server bằng tài khoản có quyền `sudo`.
 
-- Tech Blue / Ubuntu / Gradient áp đúng vào renderer.
-- VieNeu-TTS trim silence đầu/cuối chunk và loại cache audio dài bất thường.
-- Danh sách dự án phân trang 5 / 10 / 20 / Tất cả.
-- Có nút xóa dự án cũ và xóa cả output liên quan.
-- Persistent Branding, scene editor, script approval, render lại, transition, motion và background riêng.
+## Bước 2 - Cập nhật hệ thống
 
-## Cài trên bản native/systemd
+```bash
+sudo apt update
+sudo apt upgrade -y
+```
+
+## Bước 3 - Cài Git
+
+```bash
+sudo apt install -y git
+```
+
+## Bước 4 - Clone source
+
+Repository hiện là Private nên cần tài khoản GitHub/PAT có quyền truy cập.
 
 ```bash
 cd /opt
-unzip -o auto-video-gen-v2-preview2.7.0.zip
-cd /opt/auto-video-gen-v2-preview2.7.0
-sudo bash install-preview.sh
+sudo git clone https://github.com/NhanVPH2802/auto-video-gen-v2.git
 ```
 
-Kiểm tra:
+Khi GitHub yêu cầu:
+
+```text
+Username: NhanVPH2802
+Password: <GitHub Personal Access Token>
+```
+
+GitHub không sử dụng password tài khoản cho Git HTTPS.
+
+## Bước 5 - Chạy bộ cài
+
+```bash
+cd /opt/auto-video-gen-v2
+sudo bash install.sh
+```
+
+Installer tự thực hiện:
+
+- Cài dependency hệ thống.
+- Cài Node.js 22 nếu chưa có.
+- Cài FFmpeg.
+- Tạo user `autovideo`.
+- Cài Base Video Engine.
+- Cài Dashboard 2.7.0.
+- Cài npm packages.
+- Tạo các thư mục runtime.
+- Tạo systemd service.
+- Enable service khi boot.
+- Khởi động Auto Video Gen.
+
+## Bước 6 - Kiểm tra service
 
 ```bash
 sudo systemctl status auto-video-gen --no-pager -l
 ```
 
-Sau đó mở dashboard và nhấn `Ctrl + F5`.
+Trạng thái đúng:
 
-## Áp vào source Docker/GitHub
-
-```bash
-cd /opt/auto-video-gen-v2-preview2.7.0
-sudo ./apply-to-source.sh /opt/auto-video-gen-github
-
-cd /opt/auto-video-gen-github
-docker compose build auto-video-gen
-docker compose up -d --force-recreate
+```text
+Active: active (running)
 ```
 
-## Test nhanh sau khi cài
+## Bước 7 - Truy cập Dashboard
 
-1. Tạo Project A, đặt tên dự án và sửa Outro theo ý muốn.
-2. Tạo Project B: Outro phải tự lấy lại nội dung của Project A.
-3. Nhập Intro riêng: frame 2 phải là `GIỚI THIỆU`.
-4. Render Outro: nút `Follow/Following` phải hiện đủ chữ và không bị cắt.
-5. Test lại Theme Tech Blue / Ubuntu / Gradient và video 60 giây để xác nhận các fix 2.6.3 vẫn hoạt động.
+Xem IP server:
+
+```bash
+hostname -I
+```
+
+Trên máy tính mở:
+
+```text
+http://IP-SERVER:3080
+```
+
+Ví dụ:
+
+```text
+http://192.168.1.152:3080
+```
+
+---
+
+# 2. Cấu hình sau khi cài
+
+Mở Dashboard và chọn **Set API**.
+
+Sau đó cấu hình AI Provider cần sử dụng. Hệ thống hỗ trợ:
+
+- Gemini
+- OpenAI
+- Claude / Anthropic
+- GitHub Models
+- Local AI
+- OpenAI-compatible
+- Custom AI REST
+
+Tiếp theo cấu hình Voice Provider:
+
+- VieNeu-compatible
+- LucyLab
+- OpenAI-compatible TTS
+- Custom Voice REST
+
+Sau khi Save/Test thành công, tạo một dự án ngắn để kiểm tra toàn bộ pipeline.
+
+---
+
+# 3. Test sau khi triển khai
+
+Nên tạo video test khoảng 15–20 giây và kiểm tra:
+
+1. AI tạo được kịch bản.
+2. Intro xuất hiện đúng.
+3. Các frame được tạo đúng.
+4. Voice hoạt động.
+5. Không có khoảng lặng bất thường giữa frame.
+6. Theme được áp dụng.
+7. Outro được render.
+8. Follow card không bị cắt.
+9. Video tải xuống được.
+
+---
+
+# 4. Các lệnh quản trị
+
+```bash
+sudo systemctl status auto-video-gen
+sudo systemctl restart auto-video-gen
+sudo systemctl stop auto-video-gen
+sudo systemctl start auto-video-gen
+sudo journalctl -u auto-video-gen -f
+sudo journalctl -u auto-video-gen -n 100 --no-pager
+```
+
+---
+
+# 5. Thư mục hệ thống
+
+Ứng dụng production được cài tại:
+
+```text
+/opt/auto-video-gen/
+```
+
+Cấu trúc chính:
+
+```text
+/opt/auto-video-gen/
+├── base/
+├── dashboard/
+├── data/
+├── downloads/
+├── output/
+├── branding/
+└── backups/
+```
+
+Không chạy production trực tiếp từ thư mục Git clone.
+
+---
+
+# 6. Dữ liệu cần backup
+
+Quan trọng:
+
+```text
+/opt/auto-video-gen/data
+/opt/auto-video-gen/branding
+/opt/auto-video-gen/dashboard/.env.local
+```
+
+Nếu muốn giữ media/video:
+
+```text
+/opt/auto-video-gen/downloads
+/opt/auto-video-gen/output
+```
+
+Không đưa `.env.local` lên GitHub.
+
+---
+
+# 7. Backup
+
+```bash
+sudo tar -czf /root/auto-video-gen-backup.tar.gz   /opt/auto-video-gen/data   /opt/auto-video-gen/branding   /opt/auto-video-gen/dashboard/.env.local
+```
+
+Backup đầy đủ:
+
+```bash
+sudo tar -czf /root/auto-video-gen-full-backup.tar.gz   /opt/auto-video-gen/data   /opt/auto-video-gen/branding   /opt/auto-video-gen/downloads   /opt/auto-video-gen/output   /opt/auto-video-gen/dashboard/.env.local
+```
+
+---
+
+# 8. Chuyển sang server mới
+
+1. Cài Ubuntu Server 24.04 LTS.
+2. Clone repository.
+3. Chạy `sudo bash install.sh`.
+4. Stop service:
+
+```bash
+sudo systemctl stop auto-video-gen
+```
+
+5. Khôi phục `data`, `branding` và `.env.local`.
+6. Sửa quyền:
+
+```bash
+sudo chown -R autovideo:autovideo   /opt/auto-video-gen/data   /opt/auto-video-gen/branding
+
+sudo chown autovideo:autovideo   /opt/auto-video-gen/dashboard/.env.local
+
+sudo chmod 600   /opt/auto-video-gen/dashboard/.env.local
+```
+
+7. Start lại:
+
+```bash
+sudo systemctl start auto-video-gen
+```
+
+8. Kiểm tra:
+
+```bash
+sudo systemctl status auto-video-gen --no-pager -l
+```
+
+---
+
+# 9. Cập nhật source từ GitHub
+
+```bash
+cd /opt/auto-video-gen-v2
+sudo git pull
+```
+
+Không copy thủ công source mới vào `/opt/auto-video-gen` nếu chưa có hướng dẫn nâng cấp cho phiên bản đó.
+
+---
+
+# 10. Kiểm tra phiên bản
+
+```bash
+node -v
+npm -v
+ffmpeg -version | head -n 1
+```
+
+Dashboard yêu cầu Node.js `>= 22`.
+
+---
+
+# 11. Port
+
+Dashboard mặc định dùng TCP `3080`.
+
+Nếu UFW đang bật:
+
+```bash
+sudo ufw allow 3080/tcp
+sudo ufw status
+```
+
+---
+
+# 12. Xử lý lỗi
+
+```bash
+sudo systemctl status auto-video-gen --no-pager -l
+sudo journalctl -u auto-video-gen -n 100 --no-pager
+sudo ss -lntp | grep 3080
+sudo systemctl restart auto-video-gen
+```
+
+---
+
+Production baseline của NhanVPH Tech.
+
+Không commit API key, `.env.local`, dữ liệu dự án hoặc media runtime lên repository.
